@@ -37,6 +37,7 @@ setup(
                       "pandas",
                       "scikit-learn",
                       "sortedcontainers",
-                      "gmpy2",
+                      "gmpy2==2.2.0a1;python_version=='3.12'",
+                      "gmpy2;python_version<'3.12'",
                       "matplotlib"]
 )
