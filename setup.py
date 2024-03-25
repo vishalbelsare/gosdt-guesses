@@ -26,7 +26,7 @@ setup(
     packages=find_packages(where='.'),
     cmake_install_dir="gosdt",
     cmake_args=cmake_args,
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     long_description=pathlib.Path("README_PyPI.md").read_text(encoding="utf-8"),
     long_description_content_type="text/markdown",
     install_requires=["setuptools",
