@@ -2,7 +2,7 @@ name: GOSDT CI
 
 # Trigger on pushes to all branches and for all pull-requests
 # Allow to run this workflow manually from the Actions tab
-on: [push, pull_request, workflow_dispatch]
+on: [pull_request, workflow_dispatch]
 
 #
 # >> Linux and macOS Builds:
@@ -40,7 +40,7 @@ jobs:
                         python-minor-version: 8,
                     }
                     - {
-                        name: "Windows Server 2022 x86-64 (Python 3.7)",
+                        name: "Windows Server 2022 x86-64 (Python 3.8)",
                         os: windows-2022,
                         python-major-version: 3,
                         python-minor-version: 8,
