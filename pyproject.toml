@@ -9,9 +9,10 @@ requires = [
     "packaging>=20.9",
     "editables==0.2",
     "pandas",
-    "sklearn",
+    "scikit-learn",
     "sortedcontainers",
-    "gmpy2",
+    "gmpy2==2.2.0a1;python_version=='3.12'",
+    "gmpy2;python_version<'3.12'",
     "matplotlib"
 ]
 build-backend = "setuptools.build_meta"

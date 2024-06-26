@@ -18,7 +18,7 @@ print("Additional CMake Arguments = {}".format(cmake_args))
 
 setup(
     name="gosdt",
-    version="0.1.7",
+    version="0.1.8",
     description="Implementation of General Optimal Sparse Decision Tree",
     author="UBC Systopia Research Lab",
     url="https://github.com/ubc-systopia/gosdt-guesses",
@@ -26,7 +26,7 @@ setup(
     packages=find_packages(where='.'),
     cmake_install_dir="gosdt",
     cmake_args=cmake_args,
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     long_description=pathlib.Path("README_PyPI.md").read_text(encoding="utf-8"),
     long_description_content_type="text/markdown",
     install_requires=["setuptools",
@@ -35,8 +35,9 @@ setup(
                       "packaging>=20.9",
                       "editables==0.2;python_version>'3.0'",
                       "pandas",
-                      "sklearn",
+                      "scikit-learn",
                       "sortedcontainers",
-                      "gmpy2",
+                      "gmpy2==2.2.0a1;python_version=='3.12'",
+                      "gmpy2;python_version<'3.12'",
                       "matplotlib"]
 )
