@@ -1,7 +1,7 @@
 # Generalized Optimal Sparse Decision Trees
 
 [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
-![example workflow](https://github.com/ubc-systopia/gosdt-guesses-internal/actions/workflows/main.yml/badge.svg)
+![example workflow](https://github.com/ubc-systopia/gosdt-guesses/actions/workflows/main.yml/badge.svg)
 
 A [scikit-learn](https://scikit-learn.org) compatible library for generating Optimal Sparse Decision Trees.
 It is a direct competitor of CART[[3](#related-work)] and C4.5[[6](#related-work)], as well as DL8.5[[1](#related-work)], BinOct[[7](#related-work)], and OSDT[[4](#related-work)].

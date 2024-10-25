@@ -46,10 +46,10 @@ dev = [
 
 
 [project.urls]
-Homepage = "https://github.com/ubc-systopia/gosdt-guesses-internal"
-"Bug Tracker" = "https://github.com/ubc-systopia/gosdt-guesses-internal/issues"
-Discussions = "https://github.com/ubc-systopia/gosdt-guesses-internal/discussions"
-Changelog = "https://github.com/ubc-systopia/gosdt-guesses-internal/releases"
+Homepage = "https://github.com/ubc-systopia/gosdt-guesses"
+"Bug Tracker" = "https://github.com/ubc-systopia/gosdt-guesses/issues"
+Discussions = "https://github.com/ubc-systopia/gosdt-guesses/discussions"
+Changelog = "https://github.com/ubc-systopia/gosdt-guesses/releases"
 
 
 [tool.scikit-build]
