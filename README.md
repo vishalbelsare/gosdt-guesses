@@ -1,443 +1,302 @@
-# Fast Sparse Decision Tree Optimization via Reference Ensembles
+# Generalized Optimal Sparse Decision Trees
 
-This code creates optimized sparse decision trees. It is a direct competitor of CART[[3](#related-work)] and C4.5 [[6](#related-work)], as well as DL8.5[[1](#related-work)], BinOct[[7](#related-work)], and OSDT[[4](#related-work)]. Its advantage over CART and C4.5 is that the trees are globally optimized, not constructed just from the top down. This makes it slower than CART, but it provides better solutions. On the other hand, it tends to be faster than other optimal decision tree methods because it uses bounds to limit the search space, and uses a black box model (a boosted decision tree) to “guess” information about the optimal tree. It takes only seconds or a few minutes on most datasets.
+[![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+![example workflow](https://github.com/ubc-systopia/gosdt-guesses-internal/actions/workflows/main.yml/badge.svg)
 
-To make it run faster, please use the options to limit the depth of the tree, and increase the regularization parameter above 0.02. If you run the algorithm without a depth constraint or set the regularization too small, it will run more slowly.
+A [scikit-learn](https://scikit-learn.org) compatible library for generating Optimal Sparse Decision Trees.
+It is a direct competitor of CART[[3](#related-work)] and C4.5[[6](#related-work)], as well as DL8.5[[1](#related-work)], BinOct[[7](#related-work)], and OSDT[[4](#related-work)].
+Its advantage over CART and C4.5 is that the trees are globally optimized, not constructed just from the top down. 
+This makes it slower than CART, but it provides better solutions. 
+On the other hand, it tends to be faster than other optimal decision tree methods because it uses bounds to limit the search space, and uses a black box model (a boosted decision tree) to “guess” information about the optimal tree.
+It takes only seconds or a few minutes on most datasets.
 
-This work builds on a number of innovations for scalable construction of optimal tree-based classifiers: Scalable Bayesian Rule Lists[[8](#related-work)], CORELS[[2](#related-work)], OSDT[[4](#related-work)], and, most closely, GOSDT[[5](#related-work)]. 
+To make it run faster, please use the options to limit the depth of the tree, and increase the regularization parameter above 0.02.
+If you run the algorithm without a depth constraint or set the regularization too small, it will run more slowly.
 
-# Table of Content
+This work builds on a number of innovations for scalable construction of optimal tree-based classifiers: Scalable Bayesian Rule Lists[[8](#related-work)], CORELS[[2](#related-work)], OSDT[[4](#related-work)].
+
+## Table of Contents
+
 - [Installation](#installation)
-- [Compilation](#compilation)
-- [Configuration](#configuration)
 - [Example](#example)
-- [Repository Structure](#structure)
-- [License](#license)
-- [FAQs](#faqs)
+- [Frequently Asked Questions](#faq)
+- [How to build the project](#how-to-build-the-project)
+- [Project Versioning](#project-versioning)
+- [Project Structure](#project-structure)
+- [Debugging](#debugging)
+- [Related Work](#related-work)
 
----
+## Installation
 
-# Installation
-
-You may use the following commands to install GOSDT along with its dependencies on macOS, Ubuntu and Windows.  
-You need **Python 3.7 or later** to use the module `gosdt` in your project.
+GOSDT is available on [PyPI](https://pypi.org/project/gosdt/) and can thus be easily installed using pip.
 
 ```bash
-pip3 install attrs packaging editables pandas scikit-learn sortedcontainers gmpy2 matplotlib
 pip3 install gosdt
 ```
 
-You can find a list of available wheels on [PyPI](https://pypi.org/project/gosdt/).  
-Please feel free to open an issue if you do not see your distribution offered.
+## Example
 
----
+This is a classification example using GOSDT with threshold guessing, lower bound guessing and a depth limit.
+Additional examples and notebooks are available in the [`examples/`](./examples/) folder.
 
-# Compilation
-
-Please refer to the [manual](doc/build.md) to build the C++ command line interface and the Python extension module and run the experiment with example datasets on your machine.
-
----
-
-# Configuration
-
-The configuration is a JSON object and has the following structure and default values:
-```json
-{ 
-  "regularization": 0.05,
-  "depth_budget": 0,
-  "reference_LB": false, 
-  "path_to_labels": "",
-  "time_limit": 0,
-  "uncertainty_tolerance": 0.0,
-  "upperbound": 0.0,
-  "worker_limit": 1,
-  "stack_limit": 0,
-  "precision_limit": 0,
-  "model_limit": 1,
-  "verbose": false,
-  "diagnostics": false,
-  "balance": false,
-  "look_ahead": true,
-  "similar_support": true,
-  "cancellation": true,
-  "continuous_feature_exchange": false,
-  "feature_exchange": false,
-  "feature_transform": true,
-  "rule_list": false,
-  "non_binary": false,
-  "costs": "",
-  "model": "",
-  "timing": "",
-  "trace": "",
-  "tree": "",
-  "profile": ""
-}
-```
-
-## Key parameters
-
-**regularization**
- - Values: Decimal within range [0,1]
- - Description: Used to penalize complexity. A complexity penalty is added to the risk in the following way.
-   ```
-   ComplexityPenalty = # Leaves x regularization
-   ```
- - Default: 0.05
- - **Note: We highly recommend setting the regularization to a value larger than 1/num_samples. A small regularization could lead to a longer training time. If a smaller regularization is preferred, you must set the parameter `allow_small_reg` to true, which by default is false.**
-
-**allow_small_reg**
-- Values: true or false
-- Description: Flag for allowing regularization < 1/n , where n = num_samples (if false, regularizations below 1/n are automatically set to 1/n)
-- Default: false
-
-**depth_budget**
-- Values: Integers >= 1
-- Description: Used to set the maximum tree depth for solutions, counting a tree with just the root node as depth 1. 0 means unlimited.
-- Default: 0
-
-**reference_LB**
- - Values: true or false
- - Description: Enables using a vector of misclassifications from another (reference) model to lower bound our own misclassifications
- - Default: false
- - Note: If `reference_LB` is set to true, you must provide a valid `path_to_labels`. 
-
-**path_to_labels**
-- Values: String representing a path to a file. 
-- Description: This file must be a single-column csv representing a class prediction for each training observation (in the same order as for the training data, using the same class labels as for the training data, and predicting each class present in the training set at least once across all training points). Typically this csv is obtained by fitting a [gradient boosted decision tree](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingClassifier.html) model on the training data, and saving its training set predictions as a csv file. 
-- Example for a dataset with classes 1 and 0: 
-     ```
-     predicted_class
-     0
-     1
-     1
-     1
-     0
-     ```
-- Default: Empty string
-
-**time_limit**
- - Values: Decimal greater than or equal to 0
- - Description: A time limit upon which the algorithm will terminate. If the time limit is reached, the algorithm will terminate with an error.
- - Special Cases: When set to 0, no time limit is imposed.
- - Default: 0
-
-
-## More parameters
-### Flag
-
-**balance**
- - Values: true or false
- - Description: Enables overriding the sample importance by equalizing the importance of each present class
- - Default: false
-
-**cancellation**
- - Values: true or false
- - Description: Enables propagate up the dependency graph of task cancellations
- - Default: true
-
-**look_ahead**
- - Values: true or false
- - Description: Enables the one-step look-ahead bound implemented via scopes
- - Default: true
-
-**similar_support**
- - Values: true or false
- - Description: Enables the similar support bound implemented via the distance index
- - Default: true
-
-**feature_exchange**
- - Values: true or false
- - Description: Enables pruning of pairs of features using subset comparison
- - Default: false
-
-**continuous_feature_exchange**
- - Values: true or false
- - Description: Enables pruning of pairs continuous of feature thresholds using subset comparison
- - Default: false
-
-**feature_transform**
- - Values: true or false
- - Description: Enables the equivalence discovery through simple feature transformations
- - Default: true
-
-**rule_list**
- - Values: true or false
- - Description: Enables rule-list constraints on models
- - Default: false
- 
-**non_binary**
- - Values: true or false
- - Description: Enables non-binary encoding
- - Default: false
-
-**diagnostics**
- - Values: true or false
- - Description: Enables printing of diagnostic trace when an error is encountered to standard output
- - Default: false
-
-**verbose**
- - Values: true or false
- - Description: Enables printing of configuration, progress, and results to standard output
- - Default: false
-
-
-
-
-### Tuners
-
-**uncertainty_tolerance**
- - Values: Decimal within range [0,1]
- - Description: Used to allow early termination of the algorithm. Any models produced as a result are guaranteed to score within the lowerbound and upperbound at the time of termination. However, the algorithm does not guarantee that the optimal model is within the produced model unless the uncertainty value has reached 0.
- - Default: 0.0
-
-**upperbound**
- - Values: Decimal within range [0,1]
- - Description: Used to limit the risk of model search space. This can be used to ensure that no models are produced if even the optimal model exceeds a desired maximum risk. This also accelerates learning if the upperbound is taken from the risk of a nearly optimal model.
- - Special Cases: When set to 0, the bound is not activated. 
- - Default: 0.0
-
-### Limits
- 
-**model_limit**
- - Values: Decimal greater than or equal to 0
- - Description: The maximum number of models that will be extracted into the output.
- - Special Cases: When set to 0, no output is produced.
- - Default: 1
-
-**precision_limit**
- - Values: Decimal greater than or equal to 0
- - Description: The maximum number of significant figures considered when converting ordinal features into binary features.
- - Special Cases: When set to 0, no limit is imposed.
- - Default: 0
-
-**stack_limit**
- - Values: Decimal greater than or equal to 0
- - Description: The maximum number of bytes considered for use when allocating local buffers for worker threads.
- - Special Cases: When set to 0, all local buffers will be allocated from the heap.
- - Default: 0
-
-
-**worker_limit**
- - Values: Decimal greater than or equal to 1
- - Description: The maximum number of threads allocated to executing th algorithm.
- - Special Cases: When set to 0, a single thread is created for each core detected on the machine.
- - Default: 1
-
-### Files
-
-**costs**
- - Values: string representing a path to a file.
- - Description: This file must contain a CSV representing the cost matrix for calculating loss.
-   - The first row is a header listing every class that is present in the training data
-   - Each subsequent row contains the cost incurred of predicitng class **i** when the true class is **j**, where **i** is the row index and **j** is the column index
-   - Example where each false negative costs 0.1 and each false positive costs 0.2 (and correct predictions costs 0.0):
-     ```
-     negative,positive
-     0.0,0.1
-     0.2,0.0
-     ```
-   - Example for multi-class objectives:
-     ```
-     class-A,class-B,class-C
-     0.0,0.1,0.3
-     0.2,0.0,0.1
-     0.8,0.3,0.0
-     ```
-   - Note: costs values are not normalized, so high cost values lower the relative weight of regularization
- - Special Case: When set to empty string, a default cost matrix is used which represents unweighted training misclassification.
- - Default: Empty string
-
-**model**
- - Values: string representing a path to a file.
- - Description: The output models will be written to this file.
- - Special Case: When set to empty string, no model will be stored.
- - Default: Empty string
-
-**profile**
- - Values: string representing a path to a file.
- - Description: Various analytics will be logged to this file.
- - Special Case: When set to empty string, no analytics will be stored.
- - Default: Empty string
-
-**timing**
- - Values: string representing a path to a file.
- - Description: The training time will be appended to this file.
- - Special Case: When set to empty string, no training time will be stored.
- - Default: Empty string
-
-**trace**
- - Values: string representing a path to a directory.
- - Description: snapshots used for trace visualization will be stored in this directory
- - Special Case: When set to empty string, no snapshots are stored.
- - Default: Empty string
-
-**tree**
- - Values: string representing a path to a directory.
- - Description: snapshots used for trace-tree visualization will be stored in this directory
- - Special Case: When set to empty string, no snapshots are stored.
- - Default: Empty string
-
----
-# Example
-
-Example code to run GOSDT with threshold guessing, lower bound guessing, and depth limit. The example python file is available in [gosdt/example.py](/gosdt/example.py). A tutorial ipython notebook is available in [gosdt/tutorial.ipynb](/gosdt/tutorial.ipynb).  
-
-```
+```python
 import pandas as pd
-import numpy as np
-import time
-import pathlib
 from sklearn.ensemble import GradientBoostingClassifier
-from model.threshold_guess import compute_thresholds
-from model.gosdt import GOSDT
+from sklearn.model_selection import train_test_split
+from gosdt import ThresholdGuessBinarizer, GOSDTClassifier
 
-# read the dataset
-df = pd.read_csv("experiments/datasets/fico.csv")
-X, y = df.iloc[:,:-1].values, df.iloc[:,-1].values
+# Parameters
+GBDT_N_EST = 40
+GBDT_MAX_DEPTH = 1
+REGULARIZATION = 0.001
+SIMILAR_SUPPORT = False
+DEPTH_BUDGET = 6
+TIME_LIMIT = 60
+VERBOSE = True
+
+# Read the dataset
+df = pd.read_csv("datasets/compas.csv", sep=",")
+X, y = df.iloc[:, :-1], df.iloc[:, -1]
 h = df.columns[:-1]
 
-# GBDT parameters for threshold and lower bound guesses
-n_est = 40
-max_depth = 1
+# Train test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=2021)
+print("X train shape:{}, X test shape:{}".format(X_train.shape, X_test.shape))
 
-# guess thresholds
-X = pd.DataFrame(X, columns=h)
-print("X:", X.shape)
-print("y:",y.shape)
-X_train, thresholds, header, threshold_guess_time = compute_thresholds(X, y, n_est, max_depth)
-y_train = pd.DataFrame(y)
+# Step 1: Guess Thresholds
+X_train = pd.DataFrame(X_train, columns=h)
+X_test = pd.DataFrame(X_test, columns=h)
+enc = ThresholdGuessBinarizer(n_estimators=GBDT_N_EST, max_depth=GBDT_MAX_DEPTH, random_state=2021)
+enc.set_output(transform="pandas")
+X_train_guessed = enc.fit_transform(X_train, y_train)
+X_test_guessed = enc.transform(X_test)
+print(f"After guessing, X train shape:{X_train_guessed.shape}, X test shape:{X_test_guessed.shape}")
+print("train set column names == test set column names: {list(X_train_guessed.columns)==list(X_test_guessed.columns)}")
 
-# guess lower bound
-start_time = time.perf_counter()
-clf = GradientBoostingClassifier(n_estimators=n_est, max_depth=max_depth, random_state=42)
-clf.fit(X_train, y_train.values.flatten())
-warm_labels = clf.predict(X_train)
-elapsed_time = time.perf_counter() - start_time
-lb_time = elapsed_time
+# Step 2: Guess Lower Bounds
+enc = GradientBoostingClassifier(n_estimators=GBDT_N_EST, max_depth=GBDT_MAX_DEPTH, random_state=42)
+enc.fit(X_train_guessed, y_train)
+warm_labels = enc.predict(X_train_guessed)
 
-# save the labels from lower bound guesses as a tmp file and return the path to it.
-labelsdir = pathlib.Path('/tmp/warm_lb_labels')
-labelsdir.mkdir(exist_ok=True, parents=True)
-labelpath = labelsdir / 'warm_label.tmp'
-labelpath = str(labelpath)
-pd.DataFrame(warm_labels, columns=["class_labels"]).to_csv(labelpath, header="class_labels",index=None)
+# Step 3: Train the GOSDT classifier
+clf = GOSDTClassifier(regularization=REGULARIZATION, similar_support=SIMILAR_SUPPORT, time_limit=TIME_LIMIT, depth_budget=DEPTH_BUDGET, verbose=VERBOSE) 
+clf.fit(X_train_guessed, y_train, y_ref=warm_labels)
+
+# Step 4: Evaluate the model
+print("Evaluating the model, extracting tree and scores", flush=True)
 
 
-# train GOSDT model
-config = {
-            "regularization": 0.001,
-            "depth_budget": 5,
-            "warm_LB": True,
-            "path_to_labels": labelpath,
-            "time_limit": 60,
-            "similar_support": False
-        }
-
-model = GOSDT(config)
-
-model.fit(X_train, y_train)
-
-print("evaluate the model, extracting tree and scores", flush=True)
-
-# get the results
-train_acc = model.score(X_train, y_train)
-n_leaves = model.leaves()
-n_nodes = model.nodes()
-time = model.utime
-
-print("Model training time: {}".format(time))
-print("Training accuracy: {}".format(train_acc))
-print("# of leaves: {}".format(n_leaves))
-print(model.tree)
+print(f"Model training time: {clf.result_.time}")
+print(f"Training accuracy: {clf.score(X_train_guessed, y_train)}")
+print(f"Test accuracy: {clf.score(X_test_guessed, y_test)}")
 ```
 
-**Output**
+## FAQ
 
-```
-X: (10459, 23)
-y: (10459,)
-gosdt reported successful execution
-training completed. 1.658/0.098/1.756 (user, system, wall), mem=364 MB
-bounds: [0.290914..0.290914] (0.000000) loss=0.282914, iterations=13569
-evaluate the model, extracting tree and scores
-Model training time: 1.6584229469299316
-Training accuracy: 0.7170857634573095
-# of leaves: 8
-if ExternalRiskEstimate<=67.5 = 1 and MSinceMostRecentInqexcl7days<=-7.5 = 1 then:
-    predicted class: 1
-    misclassification penalty: 0.027
-    complexity penalty: 0.001
+- **Does GOSDT (implicitly) restrict the depth of the resulting tree?**
 
-else if ExternalRiskEstimate<=67.5 != 1 and MSinceMostRecentInqexcl7days<=-7.5 = 1 then:
-    predicted class: 0
-    misclassification penalty: 0.006
-    complexity penalty: 0.001
+    As of 2022, GOSDT With Guesses can now restrict the depth of the resulting tree both implicitly and explicitly. Our primary sparsity constraint is the regularization parameter (lambda) which is used to penalize the number of leaves. As lambda becomes smaller, the generated trees will have more leaves, but the number of leaves doesn't guarantee what depth a tree has since GOSDT generates trees of any shape. As of our 2022 AAAI paper, though, we've allowed users to restrict the depth of the tree. This provides more control over the tree's shape and reduces the runtime. However, the depth constraint is not a substitute for having a nonzero regularization parameter! Our algorithm achieves a better sparsity-accuracy tradeoff, and saves time, with a well-chosen lambda.
 
-else if ExternalRiskEstimate<=74.5 = 1 and MSinceMostRecentInqexcl7days<=-7.5 != 1 and MSinceMostRecentInqexcl7days<=0.5 = 1 and PercentTradesWBalance<=80.5 = 1 then:
-    predicted class: 1
-    misclassification penalty: 0.071
-    complexity penalty: 0.001
+- **Why does GOSDT run for a long time when the regularization parameter (lambda) is set to zero?**
 
-else if ExternalRiskEstimate<=74.5 != 1 and MSinceMostRecentInqexcl7days<=-7.5 != 1 and MSinceMostRecentInqexcl7days<=0.5 = 1 and PercentTradesWBalance<=80.5 = 1 then:
-    predicted class: 0
-    misclassification penalty: 0.061
-    complexity penalty: 0.001
+    The running time depends on the dataset itself and the regularization parameter (lambda). In general, setting lambda to 0 will make the running time longer. Setting lambda to 0 is kind of deactivating the branch-and-bound in GOSDT. In other words, we are kind of using brute force to search over the whole space without effective pruning, though dynamic programming can help for computational reuse. In GOSDT, we compare the difference between the upper and lower bound of a subproblem with lambda to determine whether this subproblem needs to be further split. If lambda=0, we can always split a subproblem. Therefore, it will take more time to run. It usually does not make sense to set lambda smaller than 1/n, where n is the number of samples.
 
-else if ExternalRiskEstimate<=78.5 = 1 and MSinceMostRecentInqexcl7days<=-7.5 != 1 and MSinceMostRecentInqexcl7days<=0.5 = 1 and PercentTradesWBalance<=80.5 != 1 then:
-    predicted class: 1
-    misclassification penalty: 0.033
-    complexity penalty: 0.001
+- **Is there a way to limit the size of the produced tree?**
 
-else if ExternalRiskEstimate<=78.5 != 1 and MSinceMostRecentInqexcl7days<=-7.5 != 1 and MSinceMostRecentInqexcl7days<=0.5 = 1 and PercentTradesWBalance<=80.5 != 1 then:
-    predicted class: 0
-    misclassification penalty: 0.005
-    complexity penalty: 0.001
+    Regularization parameter (lambda) is used to limit the size of the produced tree (specifically, in GOSDT, it limits the number of leaves of the produced tree). We usually set lambda to [0.1, 0.05, 0.01, 0.005, 0.001], but the value really depends on the dataset. One thing that might be helpful is considering how many samples should be captured by each leaf node. Suppose you want each leaf node to contain at least 10 samples. Then setting the regularization parameter to 10/n is reasonable. In general, the larger the value of lambda is, the sparser a tree you will get.
 
-else if ExternalRiskEstimate<=67.5 = 1 and MSinceMostRecentInqexcl7days<=-7.5 != 1 and MSinceMostRecentInqexcl7days<=0.5 != 1 then:
-    predicted class: 1
-    misclassification penalty: 0.026
-    complexity penalty: 0.001
+- **In general, how does GOSDT set the regularization parameter?**
 
-else if ExternalRiskEstimate<=67.5 != 1 and MSinceMostRecentInqexcl7days<=-7.5 != 1 and MSinceMostRecentInqexcl7days<=0.5 != 1 then:
-    predicted class: 0
-    misclassification penalty: 0.054
-    complexity penalty: 0.001
+    GOSDT aims to find an optimal tree that minimizes the training loss with a penalty on the number of leaves. The mathematical description is min loss+lambda*# of leaves. When we run GOSDT, we usually set lambda to different non-zero values and usually not smaller than 1/n. On page 31 Appendix I.6 in our ICML paper, we provide detailed information about the configuration we used to run accuracy vs. sparsity experiments.
+
+## How to build the project
+
+### Step 1: Install required development tools
+
+GOSDT uses `CMake` as its default cross-platform build system and `Ninja` as the default generator for parallel builds.
+GOSDT relies on `pybind11` for Python bindings and `scikit-build-core` as its Python meta build system for the generation of wheel files.
+GOSDT also uses `delocate`, `auditwheel` and `delvewheel` to copy all required 3rd-party dynamic libraries into the wheel archive (Each of these different tools are used for the three OS platforms we support: macOS, Linux, and Windows).
+
+Note that `delocate`, `auditwheel` and `delvewheel` are only only needed if building wheels for deployment to PyPI.
+
+**macOS**:
+We rely on the [brew](https://brew.sh/) package manager to install 3rd-party libraries and dependencies.
+
+```sh
+brew install cmake ninja pkg-config
+pip3 install --upgrade scikit-build-core pybind11 delocate
 ```
 
----
+**Ubuntu:**
 
-# Structure
+```sh
+sudo apt install -y cmake ninja-build pkg-config patchelf
+pip3 install --upgrade scikit-build-core pybind11 auditwheel
+```
 
-This repository contains the following directories and files:
-- **.github**: Configurations for GitHub action runners.
-- **doc**: Documentation
-- **experiments**: Datasets and their configurations to run experiments
-- **gosdt**: Jupyter notebook, Python implementation and wrappers around C++ implementation
-- **gosdt.xcodeproj**: Xcode project file for Mac users (Intel x86-64 and Apple Silicon)
-- **include**: Required 3rd-party header-only libraries
-- **log**: Log files
-- **src**: Source files for C++ implementation and Python binding
-- **test**: Source files for unit tests
-- **build.py**: Python script that builds the project automatically
-- **CMakeLists.txt**: Configuration file for the CMake build system
-- **pyproject.toml**: Configuration file for the SciKit build system
-- **setup.py**: Python script that builds the wheel file
+**Windows:**
+Please make sure that you launch Powershell as Admin.
 
----
+**Step 1.1.:** Install Chocolatey
 
-# FAQs
+In addition to Windows Package Manager (a.k.a. `winget`), [Chocolatey](https://chocolatey.org/) is used to install tools that are not yet provided by `winget`.
+Please follow this [guide](https://chocolatey.org/install#individual) or use the following commands to install Chocolatey.
 
-If you run into any issues when running GOSDT, consult the [**FAQs**](/doc/faqs.md) first. 
+```ps1
+Set-ExecutionPolicy Bypass -Scope Process -Force
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+```
 
----
+**Step 1.2:** Install vcpkg
 
-# License
+GOSDT requires the C++ package manager `vcpkg` to install all necessary C and C++ libraries on Windows.
+Please follow this [guide](https://vcpkg.io/en/getting-started.html) or use the following commands to install `vcpkg` to `C:\vcpkg`.
 
-This software is licensed under a 3-clause BSD license (see the LICENSE file for details). 
+```ps1
+cd C:\
+git clone https://github.com/Microsoft/vcpkg.git
+.\vcpkg\bootstrap-vcpkg.bat
+```
 
----
+Once you have installed `vcpkg`, for example, to `C:\vcpkg`, you need to...
+- Update your `PATH` variable to include `C:\vcpkg`.
+- Add a new environment variable `VCPKG_INSTALLATION_ROOT` with a value of `C:\vcpkg`.
+
+The following Powershell script modifies the system environment permanently.
+In other words, all users can see these two new variables.
+
+```ps1
+$vcpkg = "C:\vcpkg"
+$old = (Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH).path
+$new = "$old;$vcpkg"
+Set-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH -Value $new
+Set-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name VCPKG_INSTALLATION_ROOT -Value $vcpkg
+```
+
+You can verify whether the new variable `VCPKG_INSTALLATION_ROOT` is set properly by typing the following command in Powershell:
+Note that you may need to restart your terminal or reboot your computer to apply the changes.
+
+```ps1
+$ENV:VCPKG_INSTALLATION_ROOT
+```
+
+**Step 1.3:** Install required development tools
+
+```ps1
+winget install Kitware.CMake
+choco install -y ninja
+choco install -y pkgconfiglite
+pip3 install --upgrade scikit-build
+pip3 install --upgrade delvewheel
+```
+
+If `choco install -y pkgconfiglite` reports SSL/TLS-related errors, please use the following commands to install it manually.
+
+```ps1
+Invoke-WebRequest -UserAgent "Wget" -Uri "http://downloads.sourceforge.net/project/pkgconfiglite/0.28-1/pkg-config-lite-0.28-1_bin-win32.zip" -OutFile "C:\pkgconfig.zip"
+Expand-Archive "C:\pkgconfig.zip" -DestinationPath "C:\"
+Copy-Item "C:\pkg-config-lite-0.28-1\bin\pkg-config.exe" "C:\Windows"
+Remove-Item "C:\pkg-config-lite-0.28-1" -Force -Recurse
+Remove-Item "C:\pkgconfig.zip"
+```
+
+### Step 2: Install required 3rd-party libraries
+
+GOSDT relies on `IntelTBB` for concurrent data structures, and `GMP` for fast bitwise operations.
+
+**macOS:**
+
+```bash
+brew install tbb gmp
+```
+
+**Ubuntu:**
+
+```bash
+sudo apt install -y libtbb-dev libgmp-dev
+```
+
+**Windows:**
+
+```ps1
+vcpkg install tbb:x64-windows
+vcpkg install gmp:x64-windows
+```
+
+### Step 3: Build the project
+
+There are two main methods for building the project:
+
+- for local use (and development).
+- wheel generation for distribution and deployment to PYPI.
+
+The following assumes that your working directory is the project root.
+
+#### Method 1: Local use/development and debugging
+
+Note that the following command also produces the `gosdt_cli` target that can be used to hook `gdb` or other debuggers/sanitizers into the GOSDT C++ implementation.
+The project build artifacts can be found in the `pyproject-build` directory. 
+
+```bash
+pip3 install .
+```
+
+#### Method 2: Wheel generation
+
+**macOS**:
+
+```zsh
+pip3 wheel --no-deps . -w dist/
+delocate-wheel -w dist -v dist/gosdt-*.whl
+```
+
+**Windows:**
+
+```ps1
+pip3 wheel --no-deps . -w dist/
+python3 -m delvewheel repair --no-mangle-all --add-path "$ENV:VCPKG_INSTALLATION_ROOT\installed\x64-windows\bin" dist/gosdt-1.0.5-cp310-cp310-win_amd64.whl -w dist
+```
+
+**Ubuntu:**
+
+We are using Ubuntu as the host, but manylinux wheel building relies on Docker.
+For this specific target we recommend using the `cibuildwheel` tool which hides some of the painful details related to wheel building for manylinux.
+
+```bash
+pipx run cibuildwheel
+```
+
+## Project Versioning
+
+This project uses the `setuptools_scm` tool to perform project versioning for the built Python library.
+This tool uses git commit tags to pick a reasonable version number.
+In the odd case where one wishes to build this project while removing all references to the git repo, there is a patch for [`pyproject.toml`](./pyproject.toml) included at [`scripts/non_git.patch`](./scripts/non_git.patch)
+
+## Project Structure
+
+This repository contains the following directories:
+
+- **datasets**: Datasets that are used to generate plots and figures from the papers and run examples.
+- **examples**: Contains sample code and notebooks demonstrating how to use the gosdt library.
+- **scripts/build**: Scripts used while building the python library.
+- **scripts/gosdt**: Scripts to replicate the plots and figures from the ICML 2020 paper[[5](#related-work)].
+- **scripts/gosdt-guesses**: Scripts to replicate the plots and figures from the AAAI 2022 paper[[9](#related-work)]
+- **src**: Implementation of the gosdt Python and C++ library.
+- **tests**: pytest tests for the Python library.
+
+## Debugging
+
+Unfortunately, there is no super clear way to run `gdb` on the final `python` version of the project, for this we've added the `debug` configuration option to the `GOSDTClassifier` class.
+Enabling this flag will create a `debug_(current time)` directory that is populated with a serialized copy of the `Dataset` and `Configuration` classes as well as some other useful debugging information.
+
+We additionaly provide the `gosdt_cli` target which is a C++ terminal application that takes as an argument the path to a `debug_*` directory and runs the GOSDT algorithm on it.
+This enables the developper to use standard C++ tools to debug the algorithm, such as debuggers or sanitizers.
+
+An example that uses the debug flag can be found at [`examples/debug.py`](examples/debug.py)
 
 ## Related Work
+
 [1] Aglin, G.; Nijssen, S.; and Schaus, P. 2020. Learning optimal decision trees using caching branch-and-bound search. In _AAAI Conference on Artificial Intelligence_, volume 34, 3146–3153.
 
 [2] Angelino, E.; Larus-Stone, N.; Alabi, D.; Seltzer, M.; and Rudin, C. 2018. Learning Certifiably Optimal Rule Lists for Categorical Data. _Journal of Machine Learning Research_, 18(234): 1–78.
@@ -455,4 +314,4 @@ Conference on Artificial Intelligence_, volume 33, 1625–1632.
 
 [8] Yang, H., Rudin, C., & Seltzer, M. (2017, July). Scalable Bayesian rule lists. In _International Conference on Machine Learning (ICML)_ (pp. 3921-3930). PMLR.
 
----
+[9] McTavish, H., Zhong, C., Achermann, R., Karimalis, I., Chen, J., Rudin, C., & Seltzer, M. (2022). Fast Sparse Decision Tree Optimization via Reference Ensembles. _Proceedings of the AAAI Conference on Artificial Intelligence_, 36(9), 9604-9613.
