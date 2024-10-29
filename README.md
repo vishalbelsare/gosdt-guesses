@@ -1,7 +1,12 @@
-# Generalized Optimal Sparse Decision Trees
+# Fast Sparse Decision Tree Optimization via Reference Ensembles
 
 [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 ![example workflow](https://github.com/ubc-systopia/gosdt-guesses/actions/workflows/main.yml/badge.svg)
+
+**This project is the cannonical implementation of the following papers**:
+- McTavish, H., Zhong, C., Achermann, R., Karimalis, I., Chen, J., Rudin, C., & Seltzer, M. (2022). Fast Sparse Decision Tree Optimization via Reference Ensembles. Proceedings of the AAAI Conference on Artificial Intelligence, 36(9), 9604-9613. https://doi.org/10.1609/aaai.v36i9.21194
+- Jimmy Lin, Chudi Zhong, Diane Hu, Cynthia Rudin, and Margo Seltzer. 2020. Generalized and scalable optimal sparse decision trees. In Proceedings of the 37th International Conference on Machine Learning (ICML'20), Vol. 119. JMLR.org, Article 571, 6150–6160.
+
 
 A [scikit-learn](https://scikit-learn.org) compatible library for generating Optimal Sparse Decision Trees.
 It is a direct competitor of CART[[3](#related-work)] and C4.5[[6](#related-work)], as well as DL8.5[[1](#related-work)], BinOct[[7](#related-work)], and OSDT[[4](#related-work)].
