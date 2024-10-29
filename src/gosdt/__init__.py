@@ -1,7 +1,5 @@
 """
-Copyright (c) 2024 Ilias Karimalis. All rights reserved.
-
-gosdt: Implementation of General Optimal Sparse Decision Tree
+gosdt: Implementation of General Optimal Sparse Decision Tree and Fast Sparse Decision Tree Optimization via Reference Ensembles.
 """
 
 
