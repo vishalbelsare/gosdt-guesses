@@ -7,7 +7,6 @@
 - McTavish, H., Zhong, C., Achermann, R., Karimalis, I., Chen, J., Rudin, C., & Seltzer, M. (2022). Fast Sparse Decision Tree Optimization via Reference Ensembles. Proceedings of the AAAI Conference on Artificial Intelligence, 36(9), 9604-9613. https://doi.org/10.1609/aaai.v36i9.21194
 - Jimmy Lin, Chudi Zhong, Diane Hu, Cynthia Rudin, and Margo Seltzer. 2020. Generalized and scalable optimal sparse decision trees. In Proceedings of the 37th International Conference on Machine Learning (ICML'20), Vol. 119. JMLR.org, Article 571, 6150–6160.
 
-
 A [scikit-learn](https://scikit-learn.org) compatible library for generating Optimal Sparse Decision Trees.
 It is a direct competitor of CART[[3](#related-work)] and C4.5[[6](#related-work)], as well as DL8.5[[1](#related-work)], BinOct[[7](#related-work)], and OSDT[[4](#related-work)].
 Its advantage over CART and C4.5 is that the trees are globally optimized, not constructed just from the top down. 
@@ -38,6 +37,9 @@ GOSDT is available on [PyPI](https://pypi.org/project/gosdt/) and can thus be ea
 ```bash
 pip3 install gosdt
 ```
+
+Note: Our x86_64 wheels all use modern ISA extensions such AVX to perform fast bitmap operations. 
+If you're running on an older system where that's not possible, we recommend that you build from source following the [instructions bellow](#how-to-build-the-project).
 
 ## Example
 
